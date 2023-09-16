@@ -2,8 +2,11 @@
 RISC-V Instruction Set Architecture (ISA) definitions.
 """
 
+from bin_num import BinNum
+
 # pylint allow 1-2 letter variable names
 # pylint: disable=invalid-name
+
 
 # RISCV Instruction Types
 RISCV_TYPE_R = 0x1
@@ -17,107 +20,126 @@ RISCV_TYPE_MAX = 0x6
 
 # RISCV Instruction Formats
 RISCV_TYPE_FORMATS = {
-    RISCV_TYPE_R: lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
-        [
-            funct7.get_bits(6, 0),
-            rs2.get_bits(4, 0),
-            rs1.get_bits(4, 0),
-            funct3.get_bits(2, 0),
-            rd.get_bits(4, 0),
-            op.get_bits(6, 0),
-        ]
+    # RISCV_TYPE_ID: (MACHINE_CODE_FORMAT, ASSEMBLY_FORMAT)
+    RISCV_TYPE_R: (
+        lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
+            [
+                funct7.get_bits(6, 0),
+                rs2.get_bits(4, 0),
+                rs1.get_bits(4, 0),
+                funct3.get_bits(2, 0),
+                rd.get_bits(4, 0),
+                op.get_bits(6, 0),
+            ]
+        ),
+        lambda params: {
+            "rd": params[0],
+            "rs1": params[1],
+            "rs2": params[2],
+            "imm": None,
+        }
+        if len(params) == 3
+        else None,
     ),
-    RISCV_TYPE_I: lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
-        [
-            imm.get_bits(11, 0),
-            rs1.get_bits(4, 0),
-            funct3.get_bits(2, 0),
-            rd.get_bits(4, 0),
-            op.get_bits(6, 0),
-        ]
+    RISCV_TYPE_I: (
+        lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
+            [
+                imm.get_bits(11, 0),
+                rs1.get_bits(4, 0),
+                funct3.get_bits(2, 0),
+                rd.get_bits(4, 0),
+                op.get_bits(6, 0),
+            ]
+        ),
+        lambda params: {
+            "rd": params[0],
+            "rs1": params[1],
+            "rs2": None,
+            "imm": params[2],
+        }
+        if len(params) == 3
+        else None,
     ),
-    RISCV_TYPE_S: lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
-        [
-            imm.get_bits(11, 5),
-            rs2.get_bits(4, 0),
-            rs1.get_bits(4, 0),
-            funct3.get_bits(2, 0),
-            imm.get_bits(4, 0),
-            op.get_bits(6, 0),
-        ]
+    RISCV_TYPE_S: (
+        lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
+            [
+                imm.get_bits(11, 5),
+                rs2.get_bits(4, 0),
+                rs1.get_bits(4, 0),
+                funct3.get_bits(2, 0),
+                imm.get_bits(4, 0),
+                op.get_bits(6, 0),
+            ]
+        ),
+        lambda params: {
+            "rd": None,
+            "rs1": params[1],
+            "rs2": params[0],
+            "imm": params[2],
+        }
+        if len(params) == 3
+        else None,
     ),
-    RISCV_TYPE_B: lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
-        [
-            imm.get_bits(12, 12),
-            imm.get_bits(10, 5),
-            rs2.get_bits(4, 0),
-            rs1.get_bits(4, 0),
-            funct3.get_bits(2, 0),
-            imm.get_bits(4, 1),
-            imm.get_bits(11, 11),
-            op.get_bits(6, 0),
-        ]
+    RISCV_TYPE_B: (
+        lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
+            [
+                imm.get_bits(12, 12),
+                imm.get_bits(10, 5),
+                rs2.get_bits(4, 0),
+                rs1.get_bits(4, 0),
+                funct3.get_bits(2, 0),
+                imm.get_bits(4, 1),
+                imm.get_bits(11, 11),
+                op.get_bits(6, 0),
+            ]
+        ),
+        lambda params: {
+            "rd": None,
+            "rs1": params[0],
+            "rs2": params[1],
+            "imm": params[2],  # Label
+        }
+        if len(params) == 3
+        else None,
     ),
-    RISCV_TYPE_U: lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
-        [
-            imm.get_bits(31, 12),
-            rd.get_bits(4, 0),
-            op.get_bits(6, 0),
-        ]
+    RISCV_TYPE_U: (
+        lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
+            [
+                imm.get_bits(31, 12),
+                rd.get_bits(4, 0),
+                op.get_bits(6, 0),
+            ]
+        ),
+        lambda params: {
+            "rd": params[0],
+            "rs1": None,
+            "rs2": None,
+            "imm": params[1],
+        }
+        if len(params) == 2
+        else None,
     ),
-    RISCV_TYPE_J: lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
-        [
-            imm.get_bits(20, 20),
-            imm.get_bits(10, 1),
-            imm.get_bits(11, 11),
-            imm.get_bits(19, 12),
-            rd.get_bits(4, 0),
-            op.get_bits(6, 0),
-        ]
+    RISCV_TYPE_J: (
+        lambda op, funct3, funct7, rd, rs1, rs2, imm: "".join(
+            [
+                imm.get_bits(20, 20),
+                imm.get_bits(10, 1),
+                imm.get_bits(11, 11),
+                imm.get_bits(19, 12),
+                rd.get_bits(4, 0),
+                op.get_bits(6, 0),
+            ]
+        ),
+        lambda params: {
+            "rd": params[0],
+            "rs1": None,
+            "rs2": None,
+            "imm": params[1],  # Label
+        }
+        if len(params) == 2
+        else None,
     ),
 }
-
-
-class BinNum:
-    """
-    Class representing a 32-bit binary number.
-    """
-
-    def __init__(self, value: int) -> None:
-        """
-        Initializes a binary number.
-        """
-        self._value = value
-
-    @property
-    def value(self) -> int:
-        """
-        Returns the value of the binary number.
-        """
-        return self._value
-
-    @property
-    def value_strb(self) -> str:
-        """
-        Returns the value of the binary number as a string.
-        """
-        return f"{(self.value & 2**32-1):032b}"
-
-    @property
-    def value_strh(self) -> str:
-        """
-        Returns the value of the hexadecimal number as a string.
-        """
-        return f"{(self.value & 2**32-1):08x}"
-
-    def get_bits(self, top: int, bottom: int) -> int:
-        """
-        Returns bits top to bottom (inclusive) of the binary number.
-        """
-        return self.value_strb[(32 - 1) - top : 32 - bottom]
-
-    def __str__(self) -> str:
-        return self.value_strb
 
 
 class Inst:
@@ -145,7 +167,8 @@ class Inst:
         if inst_type < 1 or inst_type > RISCV_TYPE_MAX:
             raise ValueError("Invalid type value")
         self._type = inst_type
-        self._format = RISCV_TYPE_FORMATS[self._type]
+        self._format_mc = RISCV_TYPE_FORMATS[self._type][0]
+        self._format_asm = RISCV_TYPE_FORMATS[self._type][1]
 
         # op
         if op_code < 0 or op_code > 0x7F:  # 7 bits
@@ -199,7 +222,28 @@ class Inst:
         """
         return self._funct7.get_bits(6, 0)
 
-    def compile(self, rd: int, rs1: int, rs2: int, imm: int) -> int:
+    def asm_params(self, params: tuple) -> dict:
+        """
+        Returns the assembly parameters of the current instruction.
+
+        Args:
+            params: The parameters of the instruction.
+
+        Returns:
+            The assembly parameters of the instruction.
+
+        Raises:
+            ValueError: If any of the values are invalid.
+        """
+
+        # Validate
+        if not isinstance(params, tuple):
+            raise ValueError("Invalid params value")
+
+        # Format instruction
+        return self._format_asm(params)
+
+    def compile(self, rd: int, rs1: int, rs2: int, imm: int) -> BinNum:
         """
         Compiles the current instruction using the given format.
 
@@ -232,7 +276,7 @@ class Inst:
             raise ValueError("Invalid imm value")
 
         # Format instruction
-        inst_str = self._format(
+        inst_str = self._format_mc(
             op=self._op,
             funct3=self._funct3,
             funct7=self._funct7,
